@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="记账本" />
+  <title>记账本</title>
+  <style>
+    :root {
+      --primary: #FF3B30;
+      --primary-light: #FF6B6B;
+      --income: #34C759;
+      --expense: #FF3B30;
+      --bg: #F2F2F7;
+      --card: #FFFFFF;
+      --text: #1C1C1E;
+      --text2: #8E8E93;
+      --border: #E5E5EA;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --safe-top: env(safe-area-inset-top);
+      --safe-bottom: env(safe-area-inset-bottom);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      max-width: 430px;
+      margin: 0 auto;
+      padding-bottom: calc(80px + var(--safe-bottom));
+    }
+
+    /* ===== 顶部状态栏占位 ===== */
+    .status-bar { height: calc(44px + var(--safe-top)); background: var(--primary); }
+
+    /* ===== 头部 ===== */
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, #FF6B35 100%);
+      padding: 0 20px 24px;
+      color: #fff;
+    }
+    .header-title {
+      font-size: 17px;
+      font-weight: 600;
+      text-align: center;
+      padding: 12px 0 20px;
+      letter-spacing: 0.5px;
+    }
+    .balance-card {
+      background: rgba(255,255,255,0.18);
+      border-radius: 16px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+    .balance-label { font-size: 13px; opacity: 0.85; margin-bottom: 6px; }
+    .balance-amount { font-size: 36px; font-weight: 700; letter-spacing: -0.5px; }
+    .balance-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 16px;
+      gap: 12px;
+    }
+    .balance-item {
+      flex: 1;
+      background: rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    .balance-item .label { font-size: 12px; opacity: 0.8; margin-bottom: 4px; }
+    .balance-item .amount { font-size: 18px; font-weight: 600; }
+
+    /* ===== 月份切换 ===== */
+    .month-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 14px 20px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+    }
+    .month-btn {
+      width: 32px; height: 32px;
+      border: none; background: var(--bg);
+      border-radius: 50%; cursor: pointer;
+      font-size: 16px; color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .month-btn:active { background: var(--border); }
+    .month-text { font-size: 16px; font-weight: 600; min-width: 80px; text-align: center; }
+
+    /* ===== 快速记账按钮 ===== */
+    .quick-section { padding: 16px 20px 0; }
+    .section-title {
+      font-size: 13px; color: var(--text2); font-weight: 500;
+      margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .quick-btn {
+      background: var(--card);
+      border: none;
+      border-radius: 14px;
+      padding: 12px 6px 10px;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: var(--shadow);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .quick-btn:active { transform: scale(0.95); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .quick-btn .icon { font-size: 24px; line-height: 1; margin-bottom: 4px; }
+    .quick-btn .name { font-size: 11px; color: var(--text2); white-space: nowrap; }
+
+    /* ===== 记录列表 ===== */
+    .records-section { padding: 16px 20px 0; }
+    .records-list { }
+    .day-group { margin-bottom: 12px; }
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 4px 8px;
+      font-size: 13px;
+      color: var(--text2);
+    }
+    .day-header .date { font-weight: 500; }
+    .day-header .day-total { font-size: 12px; }
+    .day-total-income { color: var(--income); }
+    .day-total-expense { color: var(--expense); }
+
+    .record-item {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .record-icon {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .record-icon.expense { background: #FFF0EE; }
+    .record-icon.income  { background: #EDFAF2; }
+    .record-info { flex: 1; min-width: 0; }
+    .record-name { font-size: 15px; font-weight: 500; }
+    .record-note { font-size: 12px; color: var(--text2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .record-amount {
+      font-size: 17px; font-weight: 600; flex-shrink: 0;
+    }
+    .record-amount.expense { color: var(--expense); }
+    .record-amount.income  { color: var(--income); }
+    .record-del {
+      position: absolute; right: 0; top: 0; bottom: 0;
+      width: 70px; background: var(--expense);
+      color: #fff; border: none; cursor: pointer;
+      font-size: 14px; display: none;
+      align-items: center; justify-content: center;
+      border-radius: 0 14px 14px 0;
+    }
+    .record-item.swiped .record-del { display: flex; }
+    .record-item.swiped { transform: translateX(-70px); }
+
+    .empty-state {
+      text-align: center; padding: 50px 20px;
+      color: var(--text2);
+    }
+    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+
+    /* ===== 底部导航 ===== */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 10px 20px calc(10px + var(--safe-bottom));
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: rgba(255,255,255,0.92);
+    }
+    .nav-item {
+      flex: 1; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      cursor: pointer; color: var(--text2);
+      transition: color 0.2s;
+    }
+    .nav-item.active { color: var(--primary); }
+    .nav-item .nav-icon { font-size: 22px; }
+    .nav-item .nav-label { font-size: 10px; font-weight: 500; }
+    .nav-add {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, var(--primary), #FF6B35);
+      border-radius: 50%;
+      box-shadow: 0 4px 16px rgba(255,59,48,0.4);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s;
+      flex-shrink: 0;
+    }
+    .nav-add:active { transform: scale(0.93); }
+    .nav-add .plus { font-size: 28px; color: #fff; line-height: 1; margin-top: -2px; }
+
+    /* ===== 记账弹窗 ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: flex-end;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      width: 100%; max-width: 430px;
+      margin: 0 auto;
+      background: var(--card);
+      border-radius: 24px 24px 0 0;
+      padding: 0 0 calc(20px + var(--safe-bottom));
+      animation: slideUp 0.3s cubic-bezier(0.32,0.72,0,1);
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto 0;
+    }
+
+    /* 收/支切换 */
+    .type-tabs {
+      display: flex;
+      background: var(--bg);
+      border-radius: 12px;
+      margin: 16px 20px 0;
+      padding: 3px;
+    }
+    .type-tab {
+      flex: 1; padding: 10px;
+      border: none; background: transparent;
+      border-radius: 10px; cursor: pointer;
+      font-size: 15px; font-weight: 500;
+      color: var(--text2); transition: all 0.2s;
+    }
+    .type-tab.active {
+      background: var(--card);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .type-tab.active.expense { color: var(--expense); }
+    .type-tab.active.income  { color: var(--income); }
+
+    /* 金额输入 */
+    .amount-display {
+      margin: 20px 20px 0;
+      background: var(--bg);
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .amount-symbol { font-size: 24px; color: var(--text2); font-weight: 300; }
+    .amount-input {
+      font-size: 36px; font-weight: 700;
+      border: none; background: transparent;
+      color: var(--text); flex: 1; min-width: 0;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .amount-input::placeholder { color: var(--border); }
+
+    /* 分类选择 */
+    .category-scroll {
+      margin-top: 16px;
+      padding: 0 20px;
+      overflow-x: auto;
+      display: flex;
+      gap: 8px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .category-scroll::-webkit-scrollbar { display: none; }
+    .cat-chip {
+      flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 2px solid transparent;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      min-width: 60px;
+    }
+    .cat-chip .chip-icon { font-size: 22px; }
+    .cat-chip .chip-name { font-size: 11px; color: var(--text2); white-space: nowrap; }
+    .cat-chip.selected {
+      border-color: var(--primary);
+      background: #FFF0EE;
+    }
+    .cat-chip.selected .chip-name { color: var(--primary); }
+
+    /* 备注 */
+    .note-input {
+      margin: 14px 20px 0;
+      background: var(--bg);
+      border-radius: 14px;
+      padding: 13px 16px;
+      font-size: 15px; color: var(--text);
+      border: none; width: calc(100% - 40px);
+      outline: none; font-family: inherit;
+    }
+    .note-input::placeholder { color: var(--text2); }
+
+    /* 日期选择 */
+    .date-row {
+      margin: 12px 20px 0;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .date-row label { font-size: 13px; color: var(--text2); white-space: nowrap; }
+    .date-picker {
+      flex: 1;
+      background: var(--bg);
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px; color: var(--text);
+      font-family: inherit; outline: none;
+    }
+
+    /* 提交按钮 */
+    .submit-btn {
+      margin: 20px 20px 0;
+      width: calc(100% - 40px);
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary), #FF6B35);
+      color: #fff;
+      border: none; border-radius: 16px;
+      font-size: 17px; font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(255,59,48,0.3);
+      transition: opacity 0.2s;
+      font-family: inherit;
+    }
+    .submit-btn:active { opacity: 0.85; }
+
+    /* ===== 统计页 ===== */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .stats-header {
+      padding: 16px 20px;
+      display: flex; gap: 10px;
+    }
+    .stat-card {
+      flex: 1; background: var(--card);
+      border-radius: 16px; padding: 16px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .stat-card .s-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+    .stat-card .s-amount { font-size: 20px; font-weight: 700; }
+    .stat-card .s-amount.income { color: var(--income); }
+    .stat-card .s-amount.expense { color: var(--expense); }
+    .stat-card .s-amount.balance { color: var(--primary); }
+
+    .chart-section {
+      margin: 0 20px 16px;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+    .bar-chart { }
+    .bar-item {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    }
+    .bar-label { font-size: 13px; color: var(--text2); min-width: 48px; text-align: right; }
+    .bar-track { flex: 1; height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+    .bar-fill.expense { background: linear-gradient(90deg, var(--expense), #FF8A80); }
+    .bar-fill.income  { background: linear-gradient(90deg, var(--income), #69F0AE); }
+    .bar-value { font-size: 12px; color: var(--text2); min-width: 54px; text-align: right; }
+
+    .top-cats {
+      margin: 0 20px 16px;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    /* ===== 设置页 ===== */
+    .settings-section { padding: 16px 20px 0; }
+    .settings-group {
+      background: var(--card);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .settings-group-title {
+      font-size: 12px; color: var(--text2); font-weight: 500;
+      padding: 12px 16px 4px; letter-spacing: 0.5px;
+    }
+    .settings-row {
+      display: flex; align-items: center;
+      padding: 15px 16px; gap: 12px;
+      cursor: pointer;
+      border-top: 1px solid var(--border);
+      transition: background 0.15s;
+      text-decoration: none; color: inherit;
+    }
+    .settings-row:first-of-type { border-top: none; }
+    .settings-row:active { background: var(--bg); }
+    .settings-row .s-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .settings-row .s-info { flex: 1; }
+    .settings-row .s-title { font-size: 15px; font-weight: 500; }
+    .settings-row .s-desc  { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .settings-row .s-arrow { color: var(--text2); font-size: 16px; }
+
+    .import-box {
+      margin: 0 20px 16px;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      display: none;
+    }
+    .import-box.open { display: block; }
+    .import-box h3 { font-size: 15px; margin-bottom: 12px; }
+    .import-tip {
+      background: #FFF8F0;
+      border: 1px solid #FFE0B2;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 13px;
+      color: #E65100;
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+    .import-tip code {
+      background: rgba(0,0,0,0.08);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: 'SF Mono', monospace;
+    }
+    .file-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .file-upload-area:active { border-color: var(--primary); background: #FFF0EE; }
+    .file-upload-area .up-icon { font-size: 36px; margin-bottom: 8px; }
+    .file-upload-area .up-text { font-size: 14px; font-weight: 500; color: var(--text); }
+    .file-upload-area .up-sub  { font-size: 12px; color: var(--text2); margin-top: 4px; }
+    #csvFileInput { display: none; }
+
+    .import-result {
+      margin-top: 14px;
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.7;
+      display: none;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .template-download {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 16px;
+      font-size: 13px; color: var(--text);
+      cursor: pointer; margin-top: 12px;
+      width: 100%; justify-content: center;
+      transition: background 0.15s;
+    }
+    .template-download:active { background: var(--border); }
+
+    .qr-section {
+      margin: 0 20px 16px;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      display: none;
+      text-align: center;
+    }
+    .qr-section.open { display: block; }
+    .qr-section h3 { font-size: 15px; margin-bottom: 4px; }
+    .qr-section p  { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+    .qr-url-box {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 14px;
+      word-break: break-all;
+      color: var(--primary);
+      font-weight: 500;
+      margin-bottom: 14px;
+    }
+    .qr-steps {
+      text-align: left;
+      font-size: 13px;
+      line-height: 2;
+      color: var(--text2);
+    }
+    .qr-steps b { color: var(--text); }
+
+    /* ===== 通知 ===== */
+    .toast {
+      position: fixed; top: calc(60px + var(--safe-top));
+      left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.75);
+      color: #fff; border-radius: 20px;
+      padding: 10px 20px; font-size: 14px;
+      z-index: 999; opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div class="status-bar"></div>
+<div class="header">
+  <div class="header-title">💰 记账本</div>
+  <div class="balance-card">
+    <div class="balance-label">本月结余</div>
+    <div class="balance-amount" id="totalBalance">¥0.00</div>
+    <div class="balance-row">
+      <div class="balance-item">
+        <div class="label">💚 收入</div>
+        <div class="amount" id="totalIncome">¥0.00</div>
+      </div>
+      <div class="balance-item">
+        <div class="label">🔴 支出</div>
+        <div class="amount" id="totalExpense">¥0.00</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 月份切换 -->
+<div class="month-bar">
+  <button class="month-btn" onclick="changeMonth(-1)">‹</button>
+  <div class="month-text" id="monthText"></div>
+  <button class="month-btn" onclick="changeMonth(1)">›</button>
+</div>
+
+<!-- 页面区域 -->
+<div id="page-home" class="page active">
+  <!-- 快速记账 -->
+  <div class="quick-section">
+    <div class="section-title">快捷记账</div>
+    <div class="quick-grid" id="quickGrid"></div>
+  </div>
+
+  <!-- 记录列表 -->
+  <div class="records-section">
+    <div class="section-title" style="margin-top:20px">本月明细</div>
+    <div class="records-list" id="recordsList"></div>
+  </div>
+</div>
+
+<div id="page-stats" class="page">
+  <div class="stats-header">
+    <div class="stat-card">
+      <div class="s-label">总收入</div>
+      <div class="s-amount income" id="statIncome">¥0</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">总支出</div>
+      <div class="s-amount expense" id="statExpense">¥0</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">净结余</div>
+      <div class="s-amount balance" id="statBalance">¥0</div>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <div class="chart-title">📊 支出分类占比</div>
+    <div class="bar-chart" id="expenseChart"></div>
+  </div>
+  <div class="chart-section">
+    <div class="chart-title">📈 收入分类占比</div>
+    <div class="bar-chart" id="incomeChart"></div>
+  </div>
+</div>
+
+<!-- 设置页 -->
+<div id="page-settings" class="page">
+  <div class="settings-section">
+
+    <!-- 传到手机 -->
+    <div class="settings-group">
+      <div class="settings-group-title">📲 传到手机</div>
+      <div class="settings-row" onclick="toggleSection('qrSection')">
+        <div class="s-icon" style="background:#E8F5E9">🌐</div>
+        <div class="s-info">
+          <div class="s-title">局域网访问</div>
+          <div class="s-desc">手机和电脑连同一个WiFi，直接扫地址</div>
+        </div>
+        <span class="s-arrow">›</span>
+      </div>
+      <div class="settings-row" onclick="exportAndSave()">
+        <div class="s-icon" style="background:#E3F2FD">📤</div>
+        <div class="s-info">
+          <div class="s-title">微信/邮件发给自己</div>
+          <div class="s-desc">把HTML文件发到手机，用Safari打开后加入主屏幕</div>
+        </div>
+        <span class="s-arrow">›</span>
+      </div>
+    </div>
+    <div class="qr-section" id="qrSection">
+      <h3>📱 手机直接访问</h3>
+      <p>手机和电脑需连接同一个WiFi</p>
+      <div class="qr-url-box" id="lanUrl">正在获取地址…</div>
+      <div class="qr-steps">
+        <b>操作步骤：</b><br>
+        1. 手机打开 <b>Safari</b><br>
+        2. 输入上方地址<br>
+        3. 点右下角分享 → <b>添加到主屏幕</b><br>
+        4. 之后像 App 一样直接打开 ✅
+      </div>
+    </div>
+
+    <!-- 导入历史数据 -->
+    <div class="settings-group">
+      <div class="settings-group-title">📥 导入历史数据</div>
+      <div class="settings-row" onclick="toggleSection('importBox')">
+        <div class="s-icon" style="background:#FFF3E0">📊</div>
+        <div class="s-info">
+          <div class="s-title">从 Excel / CSV 导入</div>
+          <div class="s-desc">支持微信账单、支付宝账单及自定义格式</div>
+        </div>
+        <span class="s-arrow">›</span>
+      </div>
+    </div>
+    <div class="import-box" id="importBox">
+      <h3>导入说明</h3>
+      <div class="import-tip">
+        CSV格式要求（第一行为表头）：<br>
+        <code>日期</code>，<code>类型</code>，<code>金额</code>，<code>分类</code>，<code>备注</code><br><br>
+        • <b>日期</b>：2024-01-05 或 2024/01/05<br>
+        • <b>类型</b>：支出 / 收入（或 expense / income）<br>
+        • <b>金额</b>：数字，如 38.5<br>
+        • <b>分类</b>：餐饮/交通/购物…（不认识的自动归为其他）<br>
+        • <b>备注</b>：可为空
+      </div>
+      <div class="file-upload-area" onclick="document.getElementById('csvFileInput').click()">
+        <div class="up-icon">📂</div>
+        <div class="up-text">点击选择 CSV 文件</div>
+        <div class="up-sub">也可以把Excel另存为CSV再导入</div>
+      </div>
+      <input type="file" id="csvFileInput" accept=".csv,.txt" onchange="importCSV(event)" />
+      <div class="import-result" id="importResult"></div>
+      <button class="template-download" onclick="downloadTemplate()">⬇️ 下载填写模板（CSV）</button>
+    </div>
+
+    <!-- 数据管理 -->
+    <div class="settings-group">
+      <div class="settings-group-title">💾 数据管理</div>
+      <div class="settings-row" onclick="exportCSV()">
+        <div class="s-icon" style="background:#F3E5F5">📋</div>
+        <div class="s-info">
+          <div class="s-title">导出全部数据</div>
+          <div class="s-desc">导出为CSV，可用Excel打开编辑</div>
+        </div>
+        <span class="s-arrow">›</span>
+      </div>
+      <div class="settings-row" onclick="clearAllData()">
+        <div class="s-icon" style="background:#FFEBEE">🗑️</div>
+        <div class="s-info">
+          <div class="s-title" style="color:var(--expense)">清空所有数据</div>
+          <div class="s-desc">操作不可逆，请先导出备份</div>
+        </div>
+        <span class="s-arrow">›</span>
+      </div>
+    </div>
+
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+<!-- 底部导航 -->
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-home" onclick="switchPage('home')">
+    <span class="nav-icon">📋</span>
+    <span class="nav-label">明细</span>
+  </div>
+  <div class="nav-add" onclick="openModal()">
+    <span class="plus">+</span>
+  </div>
+  <div class="nav-item" id="nav-stats" onclick="switchPage('stats')">
+    <span class="nav-icon">📊</span>
+    <span class="nav-label">统计</span>
+  </div>
+  <div class="nav-item" id="nav-settings" onclick="switchPage('settings')">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">设置</span>
+  </div>
+</div>
+
+<!-- 记账弹窗 -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+
+    <div class="type-tabs">
+      <button class="type-tab active expense" id="tab-expense" onclick="switchType('expense')">支出</button>
+      <button class="type-tab income" id="tab-income" onclick="switchType('income')">收入</button>
+    </div>
+
+    <div class="amount-display">
+      <span class="amount-symbol">¥</span>
+      <input class="amount-input" type="number" id="amountInput"
+             placeholder="0.00" inputmode="decimal" step="0.01" min="0" />
+    </div>
+
+    <div class="category-scroll" id="catScroll"></div>
+
+    <input class="note-input" type="text" id="noteInput" placeholder="备注（选填）" maxlength="30" />
+
+    <div class="date-row">
+      <label>日期</label>
+      <input class="date-picker" type="date" id="datePicker" />
+    </div>
+
+    <button class="submit-btn" onclick="saveRecord()">记 一 笔</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================
+//  数据配置
+// ============================
+const CATEGORIES = {
+  expense: [
+    { key:'food',      icon:'🍜', name:'餐饮' },
+    { key:'shop',      icon:'🛍️', name:'购物' },
+    { key:'transport', icon:'🚌', name:'交通' },
+    { key:'entertain', icon:'🎮', name:'娱乐' },
+    { key:'health',    icon:'💊', name:'医疗' },
+    { key:'home',      icon:'🏠', name:'住房' },
+    { key:'education', icon:'📚', name:'教育' },
+    { key:'beauty',    icon:'💄', name:'美妆' },
+    { key:'pet',       icon:'🐶', name:'宠物' },
+    { key:'social',    icon:'🥂', name:'社交' },
+    { key:'telecom',   icon:'📡', name:'通信网络' },
+    { key:'study',     icon:'🎓', name:'学习' },
+    { key:'sport',     icon:'🏃', name:'运动' },
+    { key:'stock',     icon:'📉', name:'股票' },
+    { key:'realestate',icon:'🏢', name:'房产' },
+    { key:'car',       icon:'🚗', name:'车子' },
+    { key:'luxury',    icon:'👜', name:'奢侈品' },
+    { key:'other_e',   icon:'📦', name:'其他' },
+  ],
+  income: [
+    { key:'salary',    icon:'💼', name:'工资' },
+    { key:'bonus',     icon:'🎁', name:'奖金' },
+    { key:'perf',      icon:'🏆', name:'绩效收入' },
+    { key:'extra',     icon:'💰', name:'额外收入' },
+    { key:'gf',        icon:'🏦', name:'广发收入' },
+    { key:'freelance', icon:'💻', name:'兼职' },
+    { key:'invest',    icon:'📈', name:'投资' },
+    { key:'rent',      icon:'🏡', name:'租金' },
+    { key:'gift',      icon:'🧧', name:'红包' },
+    { key:'other_i',   icon:'✨', name:'其他' },
+  ]
+};
+
+const QUICK_ITEMS = [
+  { type:'expense', cat:'food',       icon:'🍜', name:'餐饮' },
+  { type:'expense', cat:'transport',  icon:'🚌', name:'交通' },
+  { type:'expense', cat:'shop',       icon:'🛍️', name:'购物' },
+  { type:'expense', cat:'social',     icon:'🥂', name:'社交' },
+  { type:'expense', cat:'stock',      icon:'📉', name:'股票' },
+  { type:'expense', cat:'realestate', icon:'🏢', name:'房产' },
+  { type:'expense', cat:'car',        icon:'🚗', name:'车子' },
+  { type:'expense', cat:'luxury',     icon:'👜', name:'奢侈品' },
+  { type:'expense', cat:'telecom',    icon:'📡', name:'通信网络' },
+  { type:'expense', cat:'study',      icon:'🎓', name:'学习' },
+  { type:'expense', cat:'sport',      icon:'🏃', name:'运动' },
+  { type:'expense', cat:'entertain',  icon:'🎮', name:'娱乐' },
+  { type:'income',  cat:'salary',     icon:'💼', name:'工资' },
+  { type:'income',  cat:'perf',       icon:'🏆', name:'绩效收入' },
+  { type:'income',  cat:'extra',      icon:'💰', name:'额外收入' },
+  { type:'income',  cat:'gf',         icon:'🏦', name:'广发收入' },
+];
+
+// ============================
+//  状态
+// ============================
+// ===== 内置历史数据（从一键记账本导入）=====
+const _PRELOADED = [{"id":1055,"type":"expense","cat":"other_e","amount":5052.5,"date":"2025-12-17","note":"[银行卡] 信用卡"},{"id":1020,"type":"expense","cat":"other_e","amount":32.0,"date":"2025-12-30","note":"[微信] 租衣服"},{"id":1015,"type":"expense","cat":"transport","amount":20.0,"date":"2025-12-31","note":"[微信] 充电"},{"id":1016,"type":"expense","cat":"food","amount":65.0,"date":"2025-12-31","note":"[微信] 聚会"},{"id":1017,"type":"expense","cat":"other_e","amount":34.0,"date":"2025-12-31","note":"[微信] 租衣服"},{"id":1018,"type":"expense","cat":"food","amount":10.0,"date":"2025-12-31","note":"[微信] 日常"},{"id":1019,"type":"expense","cat":"entertain","amount":6.0,"date":"2025-12-31","note":"[微信] 社交软件"},{"id":1026,"type":"income","cat":"gift","amount":16.0,"date":"2025-12-31","note":"[微信] 聚会"},{"id":1010,"type":"expense","cat":"transport","amount":47.23,"date":"2026-01-01","note":"[微信] 换电"},{"id":1011,"type":"expense","cat":"transport","amount":20.0,"date":"2026-01-01","note":"[微信] 充电"},{"id":1012,"type":"expense","cat":"transport","amount":20.0,"date":"2026-01-01","note":"[微信] 停车"},{"id":1013,"type":"expense","cat":"entertain","amount":140.0,"date":"2026-01-01","note":"[微信] 运动门票"},{"id":1014,"type":"expense","cat":"transport","amount":72.85,"date":"2026-01-01","note":"[微信] 高速"},{"id":1024,"type":"income","cat":"gift","amount":30.0,"date":"2026-01-01","note":"[微信] 聚会"},{"id":1025,"type":"expense","cat":"entertain","amount":240.0,"date":"2026-01-01","note":"[微信] 滑雪"},{"id":1006,"type":"expense","cat":"entertain","amount":48.0,"date":"2026-01-02","note":"[微信] 社交软件"},{"id":1007,"type":"expense","cat":"entertain","amount":68.0,"date":"2026-01-02","note":"[微信] 社交软件"},{"id":1008,"type":"expense","cat":"food","amount":18.0,"date":"2026-01-02","note":"[微信] 日常生活"},{"id":1009,"type":"expense","cat":"transport","amount":71.06,"date":"2026-01-02","note":"[微信] 高速"},{"id":1022,"type":"income","cat":"gift","amount":48.0,"date":"2026-01-02","note":"[微信] 聚会"},{"id":1023,"type":"income","cat":"gift","amount":48.0,"date":"2026-01-02","note":"[微信] 聚会"},{"id":1029,"type":"expense","cat":"food","amount":25.8,"date":"2026-01-02","note":"[支付宝] 日常"},{"id":1002,"type":"expense","cat":"entertain","amount":6.0,"date":"2026-01-03","note":"[微信] 社交软件"},{"id":1003,"type":"expense","cat":"food","amount":20.83,"date":"2026-01-03","note":"[微信] 日常"},{"id":1004,"type":"expense","cat":"entertain","amount":6.0,"date":"2026-01-03","note":"[微信] 社交软件"},{"id":1005,"type":"expense","cat":"other_e","amount":62.9,"date":"2026-01-03","note":"[微信] 拍摄衣服"},{"id":1028,"type":"expense","cat":"food","amount":16.3,"date":"2026-01-03","note":"[支付宝] 日常"},{"id":1021,"type":"expense","cat":"food","amount":42.0,"date":"2026-01-04","note":"[微信] 聚会"},{"id":1027,"type":"expense","cat":"food","amount":23.8,"date":"2026-01-04","note":"[微信] 日常"},{"id":1000,"type":"expense","cat":"other_e","amount":9.9,"date":"2026-01-05","note":"[微信] 学习"},{"id":1001,"type":"expense","cat":"food","amount":21.55,"date":"2026-01-05","note":"[微信] 日常生活"},{"id":1030,"type":"expense","cat":"food","amount":14.28,"date":"2026-01-05","note":"[微信] 日常"},{"id":1031,"type":"expense","cat":"food","amount":16.0,"date":"2026-01-05","note":"[支付宝] 日常"},{"id":1032,"type":"expense","cat":"entertain","amount":99.8,"date":"2026-01-05","note":"[支付宝] 话费充值"},{"id":1034,"type":"expense","cat":"transport","amount":3.0,"date":"2026-01-05","note":"[微信] 停车"},{"id":1033,"type":"expense","cat":"food","amount":22.5,"date":"2026-01-06","note":"[微信] 日常"},{"id":1035,"type":"expense","cat":"shop","amount":100.0,"date":"2026-01-06","note":"[微信] 置换手机"},{"id":1036,"type":"expense","cat":"transport","amount":3.8,"date":"2026-01-06","note":"[微信] 高速"},{"id":1037,"type":"expense","cat":"other_e","amount":16.3,"date":"2026-01-06","note":"[微信] 项链"},{"id":1038,"type":"expense","cat":"other_e","amount":13.76,"date":"2026-01-06","note":"[微信] 项链2"},{"id":1039,"type":"expense","cat":"other_e","amount":13.5,"date":"2026-01-06","note":"[微信] 项链3"},{"id":1040,"type":"expense","cat":"other_e","amount":13.9,"date":"2026-01-06","note":"[微信] 项链4"},{"id":1041,"type":"expense","cat":"transport","amount":3.8,"date":"2026-01-06","note":"[微信] 高速"},{"id":1042,"type":"expense","cat":"food","amount":10.9,"date":"2026-01-06","note":"[支付宝] 日常"},{"id":1043,"type":"expense","cat":"entertain","amount":2.98,"date":"2026-01-06","note":"[微信] 滑雪"},{"id":1044,"type":"expense","cat":"beauty","amount":17.8,"date":"2026-01-06","note":"[微信] 滑雪"},{"id":1045,"type":"expense","cat":"transport","amount":3.8,"date":"2026-01-07","note":"[微信] 高速"},{"id":1046,"type":"income","cat":"salary","amount":7235.6,"date":"2026-01-07","note":"[微信] 房租欠款"},{"id":1047,"type":"expense","cat":"other_e","amount":442.38,"date":"2026-01-07","note":"[微信] 招待报销"},{"id":1048,"type":"expense","cat":"other_e","amount":10227.78,"date":"2026-01-07","note":"[支付宝] 花呗还"},{"id":1049,"type":"income","cat":"extra","amount":10000.0,"date":"2026-01-07","note":"[支付宝] 借款美丽的1w"},{"id":1050,"type":"expense","cat":"food","amount":6.0,"date":"2026-01-07","note":"[微信] 日常"},{"id":1051,"type":"expense","cat":"food","amount":13.0,"date":"2026-01-07","note":"[微信] 日常"},{"id":1052,"type":"expense","cat":"other_e","amount":3311.44,"date":"2026-01-07","note":"[微信] 还款"},{"id":1053,"type":"expense","cat":"other_e","amount":25470.66,"date":"2026-01-07","note":"[银行卡] 信用卡"},{"id":1054,"type":"expense","cat":"other_e","amount":1170.09,"date":"2026-01-07","note":"[银行卡] 信用卡"},{"id":1056,"type":"expense","cat":"other_e","amount":338.5,"date":"2026-01-07","note":"[微信] 信用卡"},{"id":1057,"type":"expense","cat":"other_e","amount":858.88,"date":"2026-01-08","note":"[银行卡] 信用卡"},{"id":1058,"type":"expense","cat":"other_e","amount":29.8,"date":"2026-01-08","note":"[微信] 电池购买"},{"id":1059,"type":"expense","cat":"other_e","amount":29.81,"date":"2026-01-08","note":"[微信] 电池购买"},{"id":1060,"type":"expense","cat":"other_e","amount":7.3,"date":"2026-01-08","note":"[微信] 耳环"},{"id":1061,"type":"expense","cat":"food","amount":21.0,"date":"2026-01-08","note":"[微信] 日常"},{"id":1062,"type":"expense","cat":"shop","amount":20.8,"date":"2026-01-08","note":"[微信] 生活用品"},{"id":1063,"type":"expense","cat":"food","amount":19.9,"date":"2026-01-08","note":"[微信] 日常"},{"id":1064,"type":"expense","cat":"transport","amount":100.0,"date":"2026-01-08","note":"[微信] 充电"},{"id":1065,"type":"expense","cat":"other_e","amount":419.0,"date":"2026-01-09","note":"[微信] 硬盘购买"},{"id":1066,"type":"expense","cat":"entertain","amount":18.23,"date":"2026-01-09","note":"[支付宝] 点茶"},{"id":1067,"type":"expense","cat":"food","amount":15.83,"date":"2026-01-09","note":"[微信] 日常"},{"id":1068,"type":"expense","cat":"entertain","amount":50.0,"date":"2026-01-09","note":"[微信] 手机充值"},{"id":1069,"type":"expense","cat":"food","amount":16.0,"date":"2026-01-10","note":"[微信] 日常"},{"id":1070,"type":"expense","cat":"entertain","amount":35.0,"date":"2026-01-10","note":"[微信] 送礼"},{"id":1071,"type":"expense","cat":"entertain","amount":146.0,"date":"2026-01-10","note":"[微信] 喝茶"},{"id":1072,"type":"expense","cat":"transport","amount":10.0,"date":"2026-01-10","note":"[微信] 停车"},{"id":1073,"type":"expense","cat":"entertain","amount":40.0,"date":"2026-01-10","note":"[微信] 彩票"},{"id":1074,"type":"expense","cat":"transport","amount":10.0,"date":"2026-01-11","note":"[微信] 停车"},{"id":1075,"type":"expense","cat":"transport","amount":46.55,"date":"2026-01-11","note":"[支付宝] 代驾"},{"id":1076,"type":"expense","cat":"entertain","amount":82.75,"date":"2026-01-11","note":"[微信] 聚会"},{"id":1077,"type":"expense","cat":"entertain","amount":125.25,"date":"2026-01-11","note":"[微信] 聚会"},{"id":1078,"type":"expense","cat":"food","amount":16.1,"date":"2026-01-11","note":"[微信] 日常"},{"id":1079,"type":"expense","cat":"food","amount":15.0,"date":"2026-01-11","note":"[微信] 日常"},{"id":1080,"type":"expense","cat":"other_e","amount":23.46,"date":"2026-01-12","note":"[微信] 网线分接器"},{"id":1081,"type":"expense","cat":"food","amount":27.0,"date":"2026-01-12","note":"[微信] 日常"},{"id":1082,"type":"expense","cat":"entertain","amount":50.0,"date":"2026-01-12","note":"[微信] 聚会"},{"id":1083,"type":"expense","cat":"entertain","amount":128.0,"date":"2026-01-12","note":"[微信] 喝茶"},{"id":1084,"type":"expense","cat":"food","amount":12.0,"date":"2026-01-12","note":"[微信] 日常"},{"id":1085,"type":"expense","cat":"food","amount":4.47,"date":"2026-01-12","note":"[微信] 日常"},{"id":1086,"type":"expense","cat":"food","amount":9.0,"date":"2026-01-13","note":"[微信] 日常"},{"id":1087,"type":"expense","cat":"food","amount":3.0,"date":"2026-01-13","note":"[微信] 日常"},{"id":1088,"type":"expense","cat":"food","amount":3.8,"date":"2026-01-13","note":"[微信] 日常"},{"id":1089,"type":"expense","cat":"food","amount":24.0,"date":"2026-01-13","note":"[微信] 日常"},{"id":1090,"type":"expense","cat":"transport","amount":3.8,"date":"2026-01-13","note":"[微信] 高速"},{"id":1091,"type":"expense","cat":"food","amount":16.66,"date":"2026-01-14","note":"[微信] 日常"},{"id":1092,"type":"expense","cat":"entertain","amount":80.0,"date":"2026-01-14","note":"[微信] 运动"},{"id":1093,"type":"expense","cat":"food","amount":17.8,"date":"2026-01-14","note":"[支付宝] 日常"},{"id":1094,"type":"expense","cat":"food","amount":40.0,"date":"2026-01-14","note":"[微信] 夜宵"},{"id":1095,"type":"expense","cat":"transport","amount":3.8,"date":"2026-01-14","note":"[微信] 高速"},{"id":1096,"type":"expense","cat":"food","amount":18.93,"date":"2026-01-15","note":"[微信] 日常"},{"id":1097,"type":"expense","cat":"entertain","amount":10.0,"date":"2026-01-15","note":"[微信] 运动喝水"},{"id":1098,"type":"expense","cat":"food","amount":24.0,"date":"2026-01-15","note":"[微信] 日常"},{"id":1099,"type":"expense","cat":"other_e","amount":200.0,"date":"2026-01-16","note":"[微信] 电费"},{"id":1100,"type":"expense","cat":"transport","amount":15.67,"date":"2026-01-17","note":"[微信] 高速"},{"id":1101,"type":"expense","cat":"entertain","amount":105.0,"date":"2026-01-17","note":"[微信] 聚会"},{"id":1102,"type":"expense","cat":"entertain","amount":35.0,"date":"2026-01-17","note":"[微信] 约会"},{"id":1103,"type":"expense","cat":"food","amount":5.0,"date":"2026-01-17","note":"[微信] 水果"},{"id":1104,"type":"expense","cat":"transport","amount":2.85,"date":"2026-01-17","note":"[微信] 高速"},{"id":1105,"type":"expense","cat":"transport","amount":11.38,"date":"2026-01-17","note":"[微信] 高速"},{"id":1106,"type":"expense","cat":"food","amount":150.0,"date":"2026-01-17","note":"[微信] 聚会"},{"id":1107,"type":"expense","cat":"transport","amount":8.0,"date":"2026-01-17","note":"[微信] 停车"},{"id":1108,"type":"expense","cat":"food","amount":49.0,"date":"2026-01-17","note":"[微信] 聚会"},{"id":1109,"type":"expense","cat":"transport","amount":599.0,"date":"2026-01-18","note":"[微信] 电池租用"},{"id":1110,"type":"expense","cat":"other_e","amount":1000.0,"date":"2026-01-18","note":"[微信] 10000"},{"id":1111,"type":"expense","cat":"shop","amount":337.95,"date":"2026-01-18","note":"[微信] 衣服"},{"id":1112,"type":"expense","cat":"shop","amount":149.1,"date":"2026-01-18","note":"[微信] 衣服"},{"id":1113,"type":"expense","cat":"shop","amount":10.3,"date":"2026-01-18","note":"[微信] 衣服"},{"id":1114,"type":"expense","cat":"shop","amount":10.59,"date":"2026-01-18","note":"[微信] 电子产品"},{"id":1115,"type":"expense","cat":"shop","amount":11.44,"date":"2026-01-18","note":"[微信] 台灯"},{"id":1116,"type":"expense","cat":"food","amount":11.4,"date":"2026-01-19","note":"[微信] 日常"},{"id":1117,"type":"expense","cat":"other_e","amount":46.98,"date":"2026-01-19","note":"[微信] 厨师服购买"},{"id":1118,"type":"expense","cat":"other_e","amount":419.0,"date":"2026-01-19","note":"[微信] 硬盘"},{"id":1119,"type":"expense","cat":"other_e","amount":23.46,"date":"2026-01-19","note":"[微信] 网线"},{"id":1120,"type":"expense","cat":"food","amount":64.0,"date":"2026-01-19","note":"[微信] 日常"},{"id":1121,"type":"expense","cat":"transport","amount":100.0,"date":"2026-01-20","note":"[微信] 充电"},{"id":1122,"type":"expense","cat":"other_e","amount":98.0,"date":"2026-01-20","note":"[微信] 拍摄费用"},{"id":1123,"type":"expense","cat":"food","amount":12.0,"date":"2026-01-20","note":"[微信] 日常"},{"id":1124,"type":"income","cat":"freelance","amount":265.61,"date":"2026-01-20","note":"[支付宝] 滴滴"},{"id":1125,"type":"expense","cat":"food","amount":20.7,"date":"2026-01-21","note":"[微信] 日常"},{"id":1126,"type":"expense","cat":"food","amount":13.7,"date":"2026-01-21","note":"[微信] 日常"},{"id":1127,"type":"expense","cat":"food","amount":30.3,"date":"2026-01-21","note":"[微信] 日常"},{"id":1128,"type":"expense","cat":"food","amount":3.0,"date":"2026-01-22","note":"[微信] 早餐"},{"id":1129,"type":"expense","cat":"transport","amount":11.38,"date":"2026-01-22","note":"[微信] 高速费"},{"id":1130,"type":"expense","cat":"food","amount":10.0,"date":"2026-01-22","note":"[微信] 日常"},{"id":1131,"type":"expense","cat":"transport","amount":12.65,"date":"2026-01-22","note":"[微信] 高速"},{"id":1132,"type":"expense","cat":"food","amount":8.0,"date":"2026-01-22","note":"[微信] 日常"},{"id":1133,"type":"expense","cat":"other_e","amount":200.0,"date":"2026-01-22","note":"[微信] 燃气"},{"id":1134,"type":"expense","cat":"food","amount":20.6,"date":"2026-01-23","note":"[微信] 日常"},{"id":1135,"type":"expense","cat":"food","amount":15.0,"date":"2026-01-23","note":"[微信] rc"},{"id":1136,"type":"expense","cat":"transport","amount":43.1,"date":"2026-01-24","note":"[微信] 车载好物"},{"id":1137,"type":"expense","cat":"transport","amount":19.8,"date":"2026-01-24","note":"[微信] 车载好物"},{"id":1138,"type":"expense","cat":"food","amount":22.65,"date":"2026-01-24","note":"[微信] 日常"},{"id":1139,"type":"expense","cat":"entertain","amount":76.0,"date":"2026-01-24","note":"[微信] 约会"},{"id":1140,"type":"expense","cat":"shop","amount":114.0,"date":"2026-01-25","note":"[微信] 汽车腰靠"},{"id":1141,"type":"expense","cat":"shop","amount":28.8,"date":"2026-01-25","note":"[微信] 车辆"},{"id":1142,"type":"expense","cat":"food","amount":18.5,"date":"2026-01-25","note":"[微信] 日常"},{"id":1143,"type":"expense","cat":"other_e","amount":61.0,"date":"2026-01-26","note":"[微信] 拍摄道具"},{"id":1144,"type":"expense","cat":"transport","amount":15.67,"date":"2026-01-27","note":"[微信] 高速"},{"id":1145,"type":"expense","cat":"food","amount":62.0,"date":"2026-01-27","note":"[微信] 日常"},{"id":1146,"type":"expense","cat":"food","amount":11.0,"date":"2026-01-27","note":"[微信] 日常"},{"id":1147,"type":"expense","cat":"food","amount":100.0,"date":"2026-01-27","note":"[微信] 水果"},{"id":1148,"type":"expense","cat":"transport","amount":14.47,"date":"2026-01-27","note":"[微信] 高速"},{"id":1149,"type":"expense","cat":"shop","amount":464.9,"date":"2026-01-28","note":"[微信] 送礼物"},{"id":1150,"type":"expense","cat":"food","amount":18.57,"date":"2026-01-28","note":"[微信] 日常"},{"id":1151,"type":"expense","cat":"shop","amount":21.0,"date":"2026-01-28","note":"[微信] 理发"},{"id":1152,"type":"expense","cat":"food","amount":26.0,"date":"2026-01-28","note":"[微信] 日常"},{"id":1153,"type":"expense","cat":"food","amount":18.57,"date":"2026-01-29","note":"[微信] 日常"},{"id":1154,"type":"expense","cat":"food","amount":18.58,"date":"2026-01-29","note":"[支付宝] 日常"},{"id":1155,"type":"expense","cat":"food","amount":18.33,"date":"2026-01-30","note":"[微信] 日常"},{"id":1156,"type":"expense","cat":"food","amount":30.5,"date":"2026-01-30","note":"[微信] 日常"},{"id":1157,"type":"expense","cat":"transport","amount":5.0,"date":"2026-01-31","note":"[微信] 停车"},{"id":1158,"type":"expense","cat":"other_e","amount":109.95,"date":"2026-02-01","note":"[支付宝] 抖+"},{"id":1159,"type":"expense","cat":"food","amount":12.14,"date":"2026-02-01","note":"[微信] 日常"},{"id":1160,"type":"expense","cat":"transport","amount":4.0,"date":"2026-02-01","note":"[微信] 停车"},{"id":1161,"type":"expense","cat":"transport","amount":1.5,"date":"2026-02-01","note":"[银行卡] 自行车"},{"id":1162,"type":"expense","cat":"transport","amount":2.8,"date":"2026-02-01","note":"[微信] zoxingche"},{"id":1163,"type":"expense","cat":"food","amount":17.38,"date":"2026-02-02","note":"[微信] 日常"},{"id":1164,"type":"expense","cat":"food","amount":18.5,"date":"2026-02-02","note":"[支付宝] 日常"},{"id":1165,"type":"expense","cat":"transport","amount":15.67,"date":"2026-02-03","note":"[微信] 高速"},{"id":1166,"type":"expense","cat":"other_e","amount":25.0,"date":"2026-02-03","note":"[微信] 食材"},{"id":1168,"type":"expense","cat":"transport","amount":15.67,"date":"2026-02-04","note":"[微信] 高速"},{"id":1177,"type":"expense","cat":"transport","amount":15.67,"date":"2026-02-04","note":"[微信] 高速"},{"id":1178,"type":"expense","cat":"transport","amount":2.85,"date":"2026-02-04","note":"[微信] 高速"},{"id":1167,"type":"expense","cat":"transport","amount":50.0,"date":"2026-02-05","note":"[微信] 充电"},{"id":1169,"type":"expense","cat":"entertain","amount":2.0,"date":"2026-02-05","note":"[微信] 停车"},{"id":1170,"type":"expense","cat":"food","amount":11.5,"date":"2026-02-05","note":"[微信] 早餐"},{"id":1171,"type":"income","cat":"salary","amount":1278.06,"date":"2026-02-05","note":"[微信] 报销"},{"id":1172,"type":"expense","cat":"transport","amount":2.0,"date":"2026-02-05","note":"[微信] 停车"},{"id":1173,"type":"expense","cat":"food","amount":134.0,"date":"2026-02-05","note":"[微信] 聚会"},{"id":1174,"type":"expense","cat":"food","amount":15.0,"date":"2026-02-05","note":"[微信] 日常"},{"id":1175,"type":"expense","cat":"shop","amount":21.4,"date":"2026-02-05","note":"[微信] 零食"},{"id":1176,"type":"expense","cat":"food","amount":17.7,"date":"2026-02-06","note":"[支付宝] 日常"},{"id":1179,"type":"expense","cat":"food","amount":27.0,"date":"2026-02-06","note":"[微信] 日常"},{"id":1180,"type":"expense","cat":"food","amount":19.48,"date":"2026-02-07","note":"[支付宝] 日常"},{"id":1181,"type":"expense","cat":"food","amount":14.3,"date":"2026-02-07","note":"[微信] 日常"},{"id":1182,"type":"expense","cat":"food","amount":22.3,"date":"2026-02-08","note":"[支付宝] 日常"},{"id":1183,"type":"expense","cat":"other_e","amount":5000.0,"date":"2026-02-08","note":"[微信] 欠款"},{"id":1184,"type":"expense","cat":"shop","amount":12.0,"date":"2026-02-08","note":"[微信] 日常"},{"id":1185,"type":"expense","cat":"transport","amount":15.67,"date":"2026-02-08","note":"[微信] 高速"},{"id":1186,"type":"expense","cat":"transport","amount":100.0,"date":"2026-02-09","note":"[支付宝] 充电费用"},{"id":1187,"type":"expense","cat":"other_e","amount":200.0,"date":"2026-02-09","note":"[微信] 电费"},{"id":1188,"type":"expense","cat":"entertain","amount":44.0,"date":"2026-02-09","note":"[支付宝] 鲜花"},{"id":1189,"type":"expense","cat":"food","amount":19.3,"date":"2026-02-09","note":"[支付宝] 日常"},{"id":1190,"type":"expense","cat":"transport","amount":10.0,"date":"2026-02-09","note":"[微信] 停车"},{"id":1191,"type":"expense","cat":"shop","amount":105.0,"date":"2026-02-09","note":"[微信] 玩"},{"id":1192,"type":"expense","cat":"food","amount":40.0,"date":"2026-02-10","note":"[微信] 日常"},{"id":1193,"type":"expense","cat":"transport","amount":20.0,"date":"2026-02-10","note":"[微信] 停车"},{"id":1194,"type":"expense","cat":"transport","amount":5.0,"date":"2026-02-10","note":"[微信] 停车"},{"id":1196,"type":"expense","cat":"transport","amount":71.07,"date":"2026-02-10","note":"[微信] 交通"},{"id":1195,"type":"expense","cat":"food","amount":22.0,"date":"2026-02-11","note":"[微信] 日常"},{"id":1197,"type":"expense","cat":"transport","amount":20.0,"date":"2026-02-11","note":"[微信] 停车"},{"id":1198,"type":"expense","cat":"entertain","amount":204.0,"date":"2026-02-11","note":"[微信] 滑雪"},{"id":1199,"type":"expense","cat":"transport","amount":31.78,"date":"2026-02-12","note":"[微信] 充电"},{"id":1200,"type":"expense","cat":"transport","amount":98.0,"date":"2026-02-12","note":"[微信] 洗车"},{"id":1201,"type":"expense","cat":"transport","amount":20.0,"date":"2026-02-12","note":"[微信] 充电"},{"id":1202,"type":"expense","cat":"food","amount":12.0,"date":"2026-02-12","note":"[微信] 日常"},{"id":1203,"type":"expense","cat":"transport","amount":73.38,"date":"2026-02-12","note":"[微信] 高速"},{"id":1204,"type":"expense","cat":"transport","amount":22.87,"date":"2026-02-12","note":"[微信] 高速"},{"id":1205,"type":"expense","cat":"transport","amount":55.44,"date":"2026-02-12","note":"[微信] 换电"},{"id":1206,"type":"expense","cat":"food","amount":9.0,"date":"2026-02-12","note":"[微信] 日常"},{"id":1207,"type":"expense","cat":"transport","amount":78.01,"date":"2026-02-12","note":"[微信] 高速"},{"id":1208,"type":"expense","cat":"transport","amount":50.0,"date":"2026-02-12","note":"[支付宝] 充电"},{"id":1209,"type":"expense","cat":"food","amount":30.0,"date":"2026-02-12","note":"[微信] 日常"},{"id":1210,"type":"expense","cat":"food","amount":15.0,"date":"2026-02-13","note":"[微信] 日常"},{"id":1211,"type":"expense","cat":"transport","amount":23.84,"date":"2026-02-13","note":"[微信] 换电"},{"id":1212,"type":"expense","cat":"food","amount":12.0,"date":"2026-02-13","note":"[微信] 日常"},{"id":1213,"type":"expense","cat":"transport","amount":50.99,"date":"2026-02-13","note":"[支付宝] 换电"},{"id":1214,"type":"expense","cat":"transport","amount":151.64,"date":"2026-02-13","note":"[微信] 高速"},{"id":1215,"type":"expense","cat":"shop","amount":178.1,"date":"2026-02-13","note":"[微信] 药类"},{"id":1216,"type":"expense","cat":"transport","amount":30.16,"date":"2026-02-13","note":"[微信] 换电"},{"id":1217,"type":"expense","cat":"transport","amount":61.75,"date":"2026-02-13","note":"[微信] 高速"},{"id":1218,"type":"expense","cat":"transport","amount":19.95,"date":"2026-02-13","note":"[微信] 高速"},{"id":1219,"type":"expense","cat":"food","amount":10.0,"date":"2026-02-13","note":"[微信] 日常"},{"id":1220,"type":"expense","cat":"food","amount":61.4,"date":"2026-02-13","note":"[微信] 日常"},{"id":1221,"type":"expense","cat":"shop","amount":10.2,"date":"2026-02-13","note":"[微信] 车载玻璃水"},{"id":1222,"type":"expense","cat":"entertain","amount":52.0,"date":"2026-02-14","note":"[微信] 礼物"},{"id":1223,"type":"expense","cat":"food","amount":20.0,"date":"2026-02-14","note":"[微信] 年货"},{"id":1224,"type":"expense","cat":"food","amount":30.0,"date":"2026-02-14","note":"[微信] 年货"},{"id":1225,"type":"expense","cat":"shop","amount":57.0,"date":"2026-02-14","note":"[微信] 年货"},{"id":1226,"type":"expense","cat":"shop","amount":80.0,"date":"2026-02-14","note":"[微信] 年货"},{"id":1227,"type":"expense","cat":"shop","amount":20.0,"date":"2026-02-14","note":"[微信] 年货"},{"id":1228,"type":"expense","cat":"shop","amount":65.0,"date":"2026-02-14","note":"[微信] 年货"},{"id":1229,"type":"expense","cat":"shop","amount":10.0,"date":"2026-02-14","note":"[微信] 年货"},{"id":1230,"type":"expense","cat":"shop","amount":13.2,"date":"2026-02-14","note":"[微信] 年货"},{"id":1231,"type":"expense","cat":"shop","amount":22.4,"date":"2026-02-14","note":"[微信] 年货"},{"id":1232,"type":"expense","cat":"shop","amount":20.0,"date":"2026-02-14","note":"[微信] 年货"},{"id":1233,"type":"expense","cat":"shop","amount":173.7,"date":"2026-02-14","note":"[微信] 年货"},{"id":1234,"type":"expense","cat":"home","amount":132.5,"date":"2026-02-14","note":"[银行卡] 住宿"},{"id":1235,"type":"expense","cat":"transport","amount":100.0,"date":"2026-02-14","note":"[微信] 充电"},{"id":1236,"type":"expense","cat":"entertain","amount":43.0,"date":"2026-02-14","note":"[微信] 吃饭"},{"id":1237,"type":"expense","cat":"shop","amount":18.18,"date":"2026-02-14","note":"[微信] 打球"},{"id":1238,"type":"expense","cat":"transport","amount":50.0,"date":"2026-02-15","note":"[微信] 充电"},{"id":1239,"type":"expense","cat":"home","amount":32.0,"date":"2026-02-16","note":"[微信] 洗浴"},{"id":1240,"type":"expense","cat":"shop","amount":369.34,"date":"2026-02-16","note":"[微信] 年货"},{"id":1241,"type":"expense","cat":"entertain","amount":13.0,"date":"2026-02-19","note":"[微信] yund"},{"id":1242,"type":"expense","cat":"entertain","amount":30.0,"date":"2026-02-19","note":"[微信] 亲戚"},{"id":1243,"type":"expense","cat":"food","amount":5.0,"date":"2026-02-19","note":"[微信] 日常"},{"id":1244,"type":"expense","cat":"food","amount":36.0,"date":"2026-02-19","note":"[微信] 日常"},{"id":1245,"type":"expense","cat":"entertain","amount":109.0,"date":"2026-02-19","note":"[微信] 滑雪"},{"id":1246,"type":"expense","cat":"entertain","amount":109.0,"date":"2026-02-19","note":"[微信] 滑雪"},{"id":1247,"type":"expense","cat":"transport","amount":50.0,"date":"2026-02-19","note":"[微信] 充电"},{"id":1248,"type":"expense","cat":"food","amount":58.0,"date":"2026-02-19","note":"[微信] 洗澡"},{"id":1249,"type":"expense","cat":"entertain","amount":58.0,"date":"2026-02-19","note":"[微信] 洗浴"},{"id":1250,"type":"expense","cat":"food","amount":3.0,"date":"2026-02-22","note":"[微信] 日常"},{"id":1251,"type":"expense","cat":"entertain","amount":1000.0,"date":"2026-02-22","note":"[微信] 上礼"},{"id":1252,"type":"expense","cat":"transport","amount":119.0,"date":"2026-02-22","note":"[微信] 朋友"},{"id":1253,"type":"expense","cat":"transport","amount":127.0,"date":"2026-02-22","note":"[微信] 朋友"},{"id":1254,"type":"expense","cat":"transport","amount":7.0,"date":"2026-02-22","note":"[微信] 停车"},{"id":1255,"type":"expense","cat":"shop","amount":69.13,"date":"2026-02-22","note":"[微信] 医疗"},{"id":1256,"type":"expense","cat":"transport","amount":50.0,"date":"2026-02-22","note":"[微信] 充电"},{"id":1257,"type":"expense","cat":"transport","amount":33.26,"date":"2026-02-23","note":"[微信] 充电"},{"id":1258,"type":"expense","cat":"transport","amount":30.0,"date":"2026-02-23","note":"[微信] 日常"},{"id":1259,"type":"expense","cat":"transport","amount":39.62,"date":"2026-02-23","note":"[微信] 换电"},{"id":1260,"type":"expense","cat":"transport","amount":24.64,"date":"2026-02-23","note":"[微信] 换电"},{"id":1261,"type":"expense","cat":"home","amount":131.32,"date":"2026-02-23","note":"[微信] 春运"},{"id":1262,"type":"expense","cat":"transport","amount":2.0,"date":"2026-02-24","note":"[微信] 停车"},{"id":1263,"type":"expense","cat":"entertain","amount":146.0,"date":"2026-02-24","note":"[微信] 聚会"},{"id":1264,"type":"expense","cat":"food","amount":13.9,"date":"2026-02-25","note":"[微信] 日常"},{"id":1265,"type":"expense","cat":"food","amount":16.0,"date":"2026-02-26","note":"[微信] 日常"},{"id":1266,"type":"expense","cat":"food","amount":60.0,"date":"2026-02-26","note":"[微信] 面包"},{"id":1267,"type":"expense","cat":"food","amount":20.0,"date":"2026-02-26","note":"[微信] 日常"},{"id":1268,"type":"expense","cat":"transport","amount":100.0,"date":"2026-02-27","note":"[微信] 充电"},{"id":1269,"type":"expense","cat":"other_e","amount":238.0,"date":"2026-02-27","note":"[微信] 请客"},{"id":1270,"type":"expense","cat":"other_e","amount":83.0,"date":"2026-02-27","note":"[微信] 请客"},{"id":1271,"type":"expense","cat":"food","amount":60.0,"date":"2026-02-27","note":"[微信] 叶子"},{"id":1272,"type":"expense","cat":"food","amount":146.0,"date":"2026-02-27","note":"[微信] 约会"},{"id":1273,"type":"expense","cat":"entertain","amount":48.0,"date":"2026-02-28","note":"[微信] app"},{"id":1274,"type":"expense","cat":"entertain","amount":109.0,"date":"2026-02-28","note":"[微信] 脱口秀"},{"id":1275,"type":"expense","cat":"food","amount":24.89,"date":"2026-03-01","note":"[微信] 日常"},{"id":1276,"type":"expense","cat":"food","amount":15.0,"date":"2026-03-01","note":"[微信] 日常"},{"id":1277,"type":"expense","cat":"transport","amount":15.67,"date":"2026-03-01","note":"[微信] 高速"},{"id":1278,"type":"expense","cat":"transport","amount":15.67,"date":"2026-03-01","note":"[微信] 高速"},{"id":1279,"type":"expense","cat":"food","amount":19.64,"date":"2026-03-02","note":"[微信] 日常"},{"id":1280,"type":"expense","cat":"food","amount":419.0,"date":"2026-03-03","note":"[微信] 聚餐"},{"id":1281,"type":"expense","cat":"transport","amount":10.0,"date":"2026-03-03","note":"[微信] 停车"},{"id":1282,"type":"expense","cat":"food","amount":24.5,"date":"2026-03-03","note":"[微信] 日常"},{"id":1308,"type":"expense","cat":"transport","amount":6.23,"date":"2026-03-03","note":"[微信] 高速"},{"id":1309,"type":"expense","cat":"transport","amount":16.02,"date":"2026-03-03","note":"[微信] 高速"},{"id":1310,"type":"expense","cat":"transport","amount":17.08,"date":"2026-03-03,"note":"[微信] 高速"},{"id":1283,"type":"expense","cat":"food","amount":21.55,"date":"2026-03-04","note":"[微信] 日常"},{"id":1284,"type":"expense","cat":"other_e","amount":200.0,"date":"2026-03-04","note":"[微信] 手机充值"},{"id":1285,"type":"expense","cat":"other_e","amount":200.0,"date":"2026-03-04","note":"[微信] 手机费"},{"id":1286,"type":"expense","cat":"transport","amount":120.0,"date":"2026-03-04","note":"[微信] 停车"},{"id":1287,"type":"expense","cat":"food","amount":48.0,"date":"2026-03-04","note":"[微信] 晚餐"},{"id":1288,"type":"expense","cat":"food","amount":15.5,"date":"2026-03-05","note":"[微信] 日常"},{"id":1289,"type":"expense","cat":"food","amount":18.69,"date":"2026-03-05","note":"[微信] 日常"},{"id":1290,"type":"expense","cat":"food","amount":16.78,"date":"2026-03-06","note":"[微信] 日常"},{"id":1291,"type":"expense","cat":"transport","amount":4.0,"date":"2026-03-07","note":"[微信] 停车"},{"id":1292,"type":"income","cat":"freelance","amount":256.9,"date":"2026-03-07","note":"[银行卡] 顺风车"},{"id":1293,"type":"income","cat":"freelance","amount":1054.19,"date":"2026-03-07","note":"[支付宝] 顺风车"},{"id":1294,"type":"expense","cat":"transport","amount":72.85,"date":"2026-03-07","note":"[微信] 高速"},{"id":1307,"type":"expense","cat":"transport","amount":16.02,"date":"2026-03-07","note":"[微信] 高速"},{"id":1295,"type":"expense","cat":"food","amount":30.0,"date":"2026-03-08","note":"[微信] 日常"},{"id":1311,"type":"expense","cat":"transport","amount":71.06,"date":"2026-03-08","note":"[微信] 高速"},{"id":1296,"type":"expense","cat":"food","amount":16.0,"date":"2026-03-09","note":"[微信] 日常"},{"id":1297,"type":"expense","cat":"food","amount":15.0,"date":"2026-03-09","note":"[微信] 咖啡"},{"id":1298,"type":"expense","cat":"other_e","amount":200.0,"date":"2026-03-09","note":"[微信] 话费"},{"id":1299,"type":"expense","cat":"food","amount":18.0,"date":"2026-03-09","note":"[微信] 日常"},{"id":1300,"type":"expense","cat":"food","amount":7.0,"date":"2026-03-09","note":"[微信] 日常"},{"id":1301,"type":"expense","cat":"transport","amount":14.07,"date":"2026-03-10","note":"[微信] 充电"},{"id":1302,"type":"expense","cat":"entertain","amount":388.0,"date":"2026-03-10","note":"[微信] 学习"},{"id":1303,"type":"expense","cat":"other_e","amount":2980.0,"date":"2026-03-10","note":"[微信] Ai 学习"},{"id":1304,"type":"expense","cat":"transport","amount":16.02,"date":"2026-03-10","note":"[微信] 高速"},{"id":1305,"type":"expense","cat":"transport","amount":14.55,"date":"2026-03-10","note":"[微信] 高速"},{"id":1306,"type":"expense","cat":"transport","amount":4.86,"date":"2026-03-10","note":"[微信] 充电"},{"id":1312,"type":"expense","cat":"food","amount":32.0,"date":"2026-03-11","note":"[微信] 聚餐"},{"id":1313,"type":"expense","cat":"food","amount":148.0,"date":"2026-03-11","note":"[微信] 聚餐"},{"id":1314,"type":"expense","cat":"food","amount":12.0,"date":"2026-03-12","note":"[微信] 日常"},{"id":1315,"type":"expense","cat":"entertain","amount":32.0,"date":"2026-03-12","note":"[微信] 看电影"},{"id":1316,"type":"expense","cat":"entertain","amount":18.0,"date":"2026-03-12","note":"[微信] 日常"},{"id":1317,"type":"expense","cat":"food","amount":15.0,"date":"2026-03-12","note":"[微信] 日常"},{"id":1318,"type":"expense","cat":"transport","amount":10.0,"date":"2026-03-12","note":"[微信] 停车"},{"id":1319,"type":"expense","cat":"transport","amount":18.21,"date":"2026-03-12","note":"[微信] 充电"},{"id":1320,"type":"expense","cat":"transport","amount":16.02,"date":"2026-03-13","note":"[微信] 高速"},{"id":1321,"type":"expense","cat":"entertain","amount":21.0,"date":"2026-03-13","note":"[微信] 理发"},{"id":1322,"type":"expense","cat":"food","amount":11.0,"date":"2026-03-13","note":"[微信] 日常"},{"id":1323,"type":"expense","cat":"food","amount":20.0,"date":"2026-03-13","note":"[微信] 日常"},{"id":1324,"type":"expense","cat":"food","amount":16.0,"date":"2026-03-14","note":"[微信] 日常"},{"id":1325,"type":"expense","cat":"food","amount":31.41,"date":"2026-03-14","note":"[微信] 日常"},{"id":1326,"type":"expense","cat":"transport","amount":10.0,"date":"2026-03-14","note":"[微信] 停车"},{"id":1327,"type":"expense","cat":"food","amount":32.0,"date":"2026-03-14","note":"[微信] 日常"},{"id":1328,"type":"expense","cat":"food","amount":6.0,"date":"2026-03-14","note":"[微信] 日常"},{"id":1329,"type":"expense","cat":"shop","amount":134.5,"date":"2026-03-14","note":"[微信] 日常"},{"id":1330,"type":"expense","cat":"transport","amount":2.0,"date":"2026-03-14","note":"[微信] 洗车"},{"id":1331,"type":"expense","cat":"transport","amount":19.01,"date":"2026-03-14","note":"[微信] 充电"},{"id":1332,"type":"expense","cat":"other_e","amount":500.0,"date":"2026-03-15","note":"[微信] 保证金充值"},{"id":1333,"type":"expense","cat":"other_e","amount":200.0,"date":"2026-03-15","note":"[微信] 网费充值 200"},{"id":1334,"type":"expense","cat":"entertain","amount":49.0,"date":"2026-03-15","note":"[微信] 学习"},{"id":1335,"type":"expense","cat":"food","amount":197.0,"date":"2026-03-16","note":"[微信] 日常"},{"id":1336,"type":"expense","cat":"food","amount":15.0,"date":"2026-03-16","note":"[微信] 日常"},{"id":1337,"type":"expense","cat":"shop","amount":149.0,"date":"2026-03-16","note":"[微信] 鞋子"},{"id":1338,"type":"expense","cat":"shop","amount":59.0,"date":"2026-03-16","note":"[支付宝] 衣服"},{"id":1339,"type":"expense","cat":"other_e","amount":300.0,"date":"2026-03-17","note":"企业微信认证"},{"id":1340,"type":"expense","cat":"food","amount":18.37,"date":"2026-03-17","note":"[微信] 日常"},{"id":1341,"type":"expense","cat":"food","amount":28.0,"date":"2026-03-17","note":"[微信] 日常"},{"id":1342,"type":"expense","cat":"food","amount":12.0,"date":"2026-03-17","note":"[微信] 日常"},{"id":1343,"type":"expense","cat":"food","amount":6.0,"date":"2026-03-17","note":"[微信] 日常"},{"id":1344,"type":"expense","cat":"transport","amount":16.02,"date":"2026-03-17","note":"[微信] 高速"},{"id":1346,"type":"expense","cat":"transport","amount":14.2,"date":"2026-03-17","note":"[微信] 高速"},{"id":1345,"type":"expense","cat":"transport","amount":14.5,"date":"2026-03-18","note":"[微信] 充电"},{"id":1347,"type":"expense","cat":"food","amount":10.0,"date":"2026-03-20","note":"[微信] 日常"},{"id":1348,"type":"expense","cat":"food","amount":24.6,"date":"2026-03-21","note":"[支付宝] 日常"},{"id":1349,"type":"expense","cat":"transport","amount":3.0,"date":"2026-03-21","note":"[微信] 停车"},{"id":1350,"type":"expense","cat":"transport","amount":14.2,"date":"2026-03-21","note":"[微信] 高速"},{"id":1351,"type":"expense","cat":"transport","amount":12.75,"date":"2026-03-22","note":"[微信] 充电"},{"id":1352,"type":"expense","cat":"food","amount":7.0,"date":"2026-03-22","note":"[微信] 日常"},{"id":1353,"type":"expense","cat":"food","amount":12.0,"date":"2026-03-22","note":"[微信] 日常"},{"id":1354,"type":"expense","cat":"transport","amount":13.0,"date":"2026-03-22","note":"[微信] 高速"},{"id":1355,"type":"expense","cat":"food","amount":12.0,"date":"2026-03-23","note":"[微信] 12"},{"id":1356,"type":"expense","cat":"shop","amount":30.0,"date":"2026-03-23","note":"[支付宝] 运费"},{"id":1357,"type":"expense","cat":"food","amount":20.0,"date":"2026-03-23","note":"[微信] 日常"},{"id":1358,"type":"expense","cat":"transport","amount":15.67,"date":"2026-03-24","note":"[微信] 高速"},{"id":1359,"type":"expense","cat":"food","amount":9.9,"date":"2026-03-24","note":"[微信] 日常"},{"id":1360,"type":"expense","cat":"food","amount":20.0,"date":"2026-03-24","note":"[微信] 日常"},{"id":1361,"type":"expense","cat":"shop","amount":10.0,"date":"2026-03-24","note":"[微信] vpn"},{"id":1362,"type":"income","cat":"salary","amount":12750.0,"date":"2026-03-24","note":"[银行卡] 12月不全的工资"},{"id":1363,"type":"expense","cat":"other_e","amount":3000.0,"date":"2026-03-25","note":"[微信] 还钱"},{"id":1364,"type":"expense","cat":"food","amount":16.0,"date":"2026-03-25","note":"[微信] 日常"},{"id":1365,"type":"expense","cat":"food","amount":2.0,"date":"2026-03-25","note":"[微信] 日常"},{"id":1366,"type":"expense","cat":"transport","amount":14.2,"date":"2026-03-25","note":"[微信] 高速"},{"id":1367,"type":"expense","cat":"transport","amount":20.03,"date":"2026-03-25","note":"[微信] 充电"},{"id":1368,"type":"expense","cat":"transport","amount":16.02,"date":"2026-03-26","note":"[微信] 高速"},{"id":1369,"type":"expense","cat":"entertain","amount":18.84,"date":"2026-03-26","note":"[微信] 盲盒"},{"id":1370,"type":"expense","cat":"shop","amount":10.0,"date":"2026-03-26","note":"[微信] 耳机"},{"id":1371,"type":"expense","cat":"food","amount":9.0,"date":"2026-03-26","note":"[微信] 日常"},{"id":1372,"type":"expense","cat":"transport","amount":14.72,"date":"2026-03-27","note":"[微信] 高速"},{"id":1373,"type":"expense","cat":"food","amount":16.02,"date":"2026-03-27","note":"[微信] 咖啡"},{"id":1374,"type":"expense","cat":"other_e","amount":16.8,"date":"2026-03-27","note":"[微信] wps"},{"id":1375,"type":"expense","cat":"shop","amount":99.0,"date":"2026-03-29","note":"[微信] 电脑产品"},{"id":1376,"type":"expense","cat":"food","amount":24.0,"date":"2026-03-29","note":"[微信] 日常"},{"id":1377,"type":"expense","cat":"transport","amount":15.67,"date":"2026-03-29","note":"[微信] 高速"},{"id":1378,"type":"expense","cat":"food","amount":14.0,"date":"2026-03-29","note":"[微信] 日常"},{"id":1379,"type":"expense","cat":"entertain","amount":100.0,"date":"2026-03-29","note":"[微信] 手机充值"},{"id":1380,"type":"expense","cat":"transport","amount":11.18,"date":"2026-03-29","note":"[微信] 高速"},{"id":1381,"type":"expense","cat":"food","amount":4.0,"date":"2026-03-30","note":"[微信] 早餐"},{"id":1382,"type":"expense","cat":"other_e","amount":4.9,"date":"2026-03-30","note":"[微信] 手机壳购买"},{"id":1383,"type":"expense","cat":"food","amount":18.0,"date":"2026-03-30","note":"[微信] 午餐"},{"id":1384,"type":"expense","cat":"transport","amount":16.02,"date":"2026-03-30","note":"[微信] 高速"},{"id":1385,"type":"expense","cat":"food","amount":10.0,"date":"2026-03-30","note":"[微信] 晚饭"},{"id":1386,"type":"expense","cat":"food","amount":16.0,"date":"2026-03-30","note":"[微信] 晚饭"},{"id":1387,"type":"expense","cat":"food","amount":10.0,"date":"2026-03-30","note":"[微信] 晚饭"},{"id":1389,"type":"expense","cat":"transport","amount":14.2,"date":"2026-03-30","note":"[微信] 高速"},{"id":1388,"type":"expense","cat":"transport","amount":23.29,"date":"2026-03-31","note":"[微信] 充电"},{"id":1390,"type":"expense","cat":"food","amount":4.0,"date":"2026-03-31","note":"[微信] 早餐"},{"id":1391,"type":"expense","cat":"transport","amount":42.28,"date":"2026-03-31","note":"[微信] 高速"},{"id":1392,"type":"expense","cat":"shop","amount":65.0,"date":"2026-04-01","note":"[微信] 小吃"},{"id":1393,"type":"expense","cat":"food","amount":5.0,"date":"2026-04-01","note":"[微信] 水"},{"id":1394,"type":"expense","cat":"shop","amount":100.0,"date":"2026-04-01","note":"[微信] 礼品"},{"id":1395,"type":"expense","cat":"food","amount":12.0,"date":"2026-04-01","note":"[微信] 午饭"},{"id":1396,"type":"expense","cat":"transport","amount":11.52,"date":"2026-04-01","note":"[微信] 充电"},{"id":1397,"type":"expense","cat":"food","amount":6.0,"date":"2026-04-02","note":"[微信] 早餐"},{"id":1398,"type":"expense","cat":"food","amount":17.0,"date":"2026-04-02","note":"[微信] 午饭"},{"id":1399,"type":"expense","cat":"transport","amount":5.0,"date":"2026-04-02","note":"[微信] 停车"},{"id":1400,"type":"expense","cat":"food","amount":6.0,"date":"2026-04-03","note":"[微信] 晚饭"},{"id":1401,"type":"expense","cat":"food","amount":9.0,"date":"2026-04-03","note":"[微信] 晚饭"},{"id":1406,"type":"expense","cat":"transport","amount":14.2,"date":"2026-04-03","note":"[微信] 高速"},{"id":1402,"type":"expense","cat":"food","amount":2.0,"date":"2026-04-04","note":"[微信] 早餐"},{"id":1403,"type":"expense","cat":"transport","amount":120.0,"date":"2026-04-04","note":"[微信] 停车"},{"id":1404,"type":"expense","cat":"food","amount":11.0,"date":"2026-04-04","note":"[微信] 水果"},{"id":1405,"type":"expense","cat":"shop","amount":40.0,"date":"2026-04-05","note":"[微信] api"},{"id":1407,"type":"expense","cat":"food","amount":20.0,"date":"2026-04-05","note":"[微信] 晚饭"},{"id":1408,"type":"expense","cat":"food","amount":9.0,"date":"2026-04-06","note":"[微信] 水果"},{"id":1409,"type":"expense","cat":"transport","amount":21.37,"date":"2026-04-07","note":"[微信] 充电"},{"id":1410,"type":"expense","cat":"shop","amount":151.0,"date":"2026-04-07","note":"[微信] 健身"},{"id":1411,"type":"expense","cat":"food","amount":9.9,"date":"2026-04-07","note":"[微信] 咖啡"},{"id":1412,"type":"expense","cat":"transport","amount":145.0,"date":"2026-04-07","note":"[微信] 洗车"},{"id":1413,"type":"expense","cat":"transport","amount":14.2,"date":"2026-04-07","note":"[微信] 高速"},{"id":1414,"type":"expense","cat":"food","amount":17.41,"date":"2026-04-08","note":"[微信] 午饭"},{"id":1415,"type":"expense","cat":"transport","amount":8.08,"date":"2026-04-09","note":"[微信] 8 充电"},{"id":1416,"type":"expense","cat":"food","amount":40.0,"date":"2026-04-09","note":"[微信] 午饭"},{"id":1417,"type":"expense","cat":"transport","amount":16.02,"date":"2026-04-09","note":"[微信] 高速"},{"id":1418,"type":"expense","cat":"food","amount":9.9,"date":"2026-04-09","note":"[微信] 咖啡"},{"id":1419,"type":"expense","cat":"food","amount":14.0,"date":"2026-04-09","note":"[微信] 晚饭"},{"id":1420,"type":"expense","cat":"transport","amount":14.55,"date":"2026-04-09","note":"[微信] 高速"},{"id":1421,"type":"expense","cat":"transport","amount":14.53,"date":"2026-04-10","note":"[微信] 充电"},{"id":1422,"type":"expense","cat":"food","amount":40.0,"date":"2026-04-10","note":"[微信] 买水"},{"id":1423,"type":"expense","cat":"food","amount":24.5,"date":"2026-04-10","note":"[微信] 午饭"},{"id":1424,"type":"expense","cat":"food","amount":18.0,"date":"2026-04-13","note":"[微信] 午饭"},{"id":1425,"type":"expense","cat":"food","amount":128.0,"date":"2026-04-13","note":"[微信] 晚饭"},{"id":1426,"type":"expense","cat":"food","amount":10.0,"date":"2026-04-14","note":"[微信] 早餐"},{"id":1427,"type":"expense","cat":"food","amount":12.65,"date":"2026-04-14","note":"[微信] 晚饭"},{"id":1428,"type":"expense","cat":"other_e","amount":288.0,"date":"2026-04-14","note":"[微信] 运费报销"},{"id":1429,"type":"expense","cat":"food","amount":11.0,"date":"2026-04-15","note":"[微信] 水果"},{"id":1430,"type":"expense","cat":"food","amount":25.0,"date":"2026-04-16","note":"[微信] 晚饭"},{"id":1431,"type":"expense","cat":"food","amount":14.2,"date":"2026-04-16","note":"[微信] 高速"},{"id":1432,"type":"expense","cat":"other_e","amount":300.0,"date":"2026-04-17","note":"[微信] 小程序认证"},{"id":1433,"type":"expense","cat":"food","amount":43.0,"date":"2026-04-17","note":"[微信] 午饭"},{"id":1434,"type":"expense","cat":"food","amount":20.6,"date":"2026-04-17","note":"[微信] 晚饭"},{"id":1435,"type":"expense","cat":"other_e","amount":11.0,"date":"2026-04-18","note":"[微信] 运费"},{"id":1436,"type":"expense","cat":"food","amount":13.0,"date":"2026-04-18","note":"[微信] 午饭"},{"id":1437,"type":"expense","cat":"transport","amount":14.2,"date":"2026-04-18","note":"[微信] 高速"},{"id":1438,"type":"expense","cat":"transport","amount":8.0,"date":"2026-04-18","note":"[微信] 停车"},{"id":1439,"type":"expense","cat":"transport","amount":30.0,"date":"2026-04-18","note":"[微信] 充电"},{"id":1440,"type":"expense","cat":"transport","amount":10.0,"date":"2026-04-18","note":"[微信] 停车"},{"id":1441,"type":"expense","cat":"transport","amount":15.23,"date":"2026-04-19","note":"[微信] 充电"},{"id":1442,"type":"expense","cat":"food","amount":2.0,"date":"2026-04-19","note":"[微信] 早餐"},{"id":1443,"type":"expense","cat":"food","amount":36.0,"date":"2026-04-19","note":"[微信] 午饭"},{"id":1444,"type":"expense","cat":"food","amount":11.8,"date":"2026-04-19","note":"[微信] 晚饭"},{"id":1445,"type":"expense","cat":"transport","amount":11.39,"date":"2026-04-19","note":"[微信] 充电"},{"id":1446,"type":"expense","cat":"food","amount":11.0,"date":"2026-04-20","note":"[微信] 午饭"},{"id":1447,"type":"expense","cat":"entertain","amount":29.9,"date":"2026-04-20","note":"[微信] 礼物"},{"id":1448,"type":"expense","cat":"transport","amount":16.02,"date":"2026-04-20","note":"[微信] 高速"},{"id":1449,"type":"expense","cat":"food","amount":42.0,"date":"2026-04-20","note":"[微信] 晚饭"},{"id":1450,"type":"expense","cat":"transport","amount":16.55,"date":"2026-04-20","note":"[微信] 充电"},{"id":1451,"type":"expense","cat":"food","amount":6.0,"date":"2026-04-21","note":"[微信] 早饭"},{"id":1452,"type":"expense","cat":"food","amount":14.0,"date":"2026-04-21","note":"[微信] 水果"},{"id":1453,"type":"expense","cat":"transport","amount":11.95,"date":"2026-04-22","note":"[微信] 充电"},{"id":1454,"type":"expense","cat":"food","amount":4.0,"date":"2026-04-22","note":"[微信] 早饭"},{"id":1455,"type":"expense","cat":"transport","amount":14.55,"date":"2026-04-22","note":"[微信] 高速"},{"id":1456,"type":"expense","cat":"transport","amount":16.91,"date":"2026-04-22","note":"[微信] 充电"},{"id":1457,"type":"expense","cat":"other_e","amount":50.0,"date":"2026-04-23","note":"[微信] 飞书"},{"id":1458,"type":"expense","cat":"transport","amount":9.0,"date":"2026-04-23","note":"[微信] 停车"},{"id":1459,"type":"expense","cat":"food","amount":96.0,"date":"2026-04-23","note":"[微信] 午饭"},{"id":1460,"type":"expense","cat":"food","amount":14.0,"date":"2026-04-23","note":"[微信] 饮料"},{"id":1461,"type":"expense","cat":"food","amount":16.0,"date":"2026-04-23","note":"[微信] 晚饭"},{"id":1462,"type":"expense","cat":"transport","amount":16.02,"date":"2026-04-24","note":"[微信] 高速"},{"id":1463,"type":"expense","cat":"transport","amount":14.2,"date":"2026-04-24","note":"[微信] 高速"},{"id":1464,"type":"expense","cat":"shop","amount":53.0,"date":"2026-04-25","note":"[微信] 洗衣服"}];
+
+// 初始化：如果localStorage没有数据，则使用预载数据；如果有，则合并预载数据（避免重复）
+const _stored = JSON.parse(localStorage.getItem('accountRecords') || '[]');
+const _preloadedIds = new Set(_PRELOADED.map(r => r.id));
+const _storedOnly = _stored.filter(r => !_preloadedIds.has(r.id));
+let records = [..._PRELOADED, ..._storedOnly];
+let currentType = 'expense';
+let selectedCat = 'food';
+let currentDate = new Date();
+let currentYear = currentDate.getFullYear();
+let currentMonth = currentDate.getMonth() + 1; // 1-12
+
+// ============================
+//  初始化
+// ============================
+function init() {
+  renderQuickGrid();
+  renderCatChips();
+  setDefaultDate();
+  updateMonthText();
+  render();
+}
+
+function setDefaultDate() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const dd = String(today.getDate()).padStart(2,'0');
+  document.getElementById('datePicker').value = `${yyyy}-${mm}-${dd}`;
+}
+
+function renderQuickGrid() {
+  const grid = document.getElementById('quickGrid');
+  grid.innerHTML = QUICK_ITEMS.map(item => `
+    <button class="quick-btn" onclick="quickAdd('${item.type}','${item.cat}')">
+      <div class="icon">${item.icon}</div>
+      <div class="name">${item.name}</div>
+    </button>
+  `).join('');
+}
+
+function renderCatChips() {
+  const cats = CATEGORIES[currentType];
+  const scroll = document.getElementById('catScroll');
+  scroll.innerHTML = cats.map(c => `
+    <div class="cat-chip ${c.key === selectedCat ? 'selected' : ''}"
+         onclick="selectCat('${c.key}')">
+      <span class="chip-icon">${c.icon}</span>
+      <span class="chip-name">${c.name}</span>
+    </div>
+  `).join('');
+}
+
+// ============================
+//  月份
+// ============================
+function updateMonthText() {
+  document.getElementById('monthText').textContent = `${currentYear}年${currentMonth}月`;
+}
+
+function changeMonth(delta) {
+  currentMonth += delta;
+  if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+  if (currentMonth < 1)  { currentMonth = 12; currentYear--; }
+  updateMonthText();
+  render();
+}
+
+function getMonthRecords() {
+  return records.filter(r => {
+    const d = new Date(r.date);
+    return d.getFullYear() === currentYear && d.getMonth()+1 === currentMonth;
+  });
+}
+
+// ============================
+//  渲染主界面
+// ============================
+function render() {
+  const monthData = getMonthRecords();
+  const income  = monthData.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount, 0);
+  const expense = monthData.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount, 0);
+  const balance = income - expense;
+
+  document.getElementById('totalIncome').textContent  = fmt(income);
+  document.getElementById('totalExpense').textContent = fmt(expense);
+  document.getElementById('totalBalance').textContent = fmt(balance);
+
+  renderRecordsList(monthData);
+  renderStats(monthData);
+}
+
+function fmt(n) {
+  return '¥' + Math.abs(n).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtSign(n, type) {
+  return (type === 'expense' ? '-' : '+') + fmt(n);
+}
+
+function renderRecordsList(data) {
+  const list = document.getElementById('recordsList');
+  if (!data.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="emoji">📝</div>
+        <p>本月还没有记录，快去记一笔吧~</p>
+      </div>`;
+    return;
+  }
+
+  // 按日期分组
+  const groups = {};
+  data.forEach(r => {
+    const d = r.date;
+    if (!groups[d]) groups[d] = [];
+    groups[d].push(r);
+  });
+
+  const sortedDates = Object.keys(groups).sort((a,b) => b.localeCompare(a));
+
+  list.innerHTML = sortedDates.map(date => {
+    const dayRecords = groups[date];
+    const dayIncome  = dayRecords.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount,0);
+    const dayExpense = dayRecords.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount,0);
+
+    const dateLabel = formatDateLabel(date);
+    const totalStr  = [
+      dayIncome  ? `<span class="day-total-income">+${fmt(dayIncome)}</span>` : '',
+      dayExpense ? `<span class="day-total-expense">-${fmt(dayExpense)}</span>` : ''
+    ].filter(Boolean).join(' ');
+
+    const items = dayRecords.sort((a,b) => b.id - a.id).map(r => {
+      const cat = findCat(r.type, r.cat);
+      return `
+        <div class="record-item" id="ri-${r.id}" ontouchstart="touchStart(event,${r.id})" ontouchend="touchEnd(event,${r.id})">
+          <div class="record-icon ${r.type}">${cat.icon}</div>
+          <div class="record-info">
+            <div class="record-name">${cat.name}</div>
+            ${r.note ? `<div class="record-note">${r.note}</div>` : ''}
+          </div>
+          <div class="record-amount ${r.type}">${fmtSign(r.amount, r.type)}</div>
+          <button class="record-del" onclick="deleteRecord(${r.id})">删除</button>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="day-group">
+        <div class="day-header">
+          <span class="date">${dateLabel}</span>
+          <span>${totalStr}</span>
+        </div>
+        ${items}
+      </div>`;
+  }).join('');
+}
+
+function formatDateLabel(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
+
+  const mm = d.getMonth()+1, dd = d.getDate();
+  const weekDays = ['日','一','二','三','四','五','六'];
+  const week = '周' + weekDays[d.getDay()];
+
+  if (d.toDateString() === today.toDateString()) return `今天 ${week}`;
+  if (d.toDateString() === yesterday.toDateString()) return `昨天 ${week}`;
+  return `${mm}月${dd}日 ${week}`;
+}
+
+function findCat(type, key) {
+  return CATEGORIES[type].find(c=>c.key===key) || {icon:'📦', name:'其他'};
+}
+
+// ============================
+//  统计页
+// ============================
+function renderStats(data) {
+  const income  = data.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount,0);
+  const expense = data.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount,0);
+  const balance = income - expense;
+
+  document.getElementById('statIncome').textContent  = fmt(income);
+  document.getElementById('statExpense').textContent = fmt(expense);
+  document.getElementById('statBalance').textContent = fmt(balance);
+
+  renderBarChart('expenseChart', 'expense', data);
+  renderBarChart('incomeChart',  'income',  data);
+}
+
+function renderBarChart(elId, type, data) {
+  const el = document.getElementById(elId);
+  const filtered = data.filter(r=>r.type===type);
+  if (!filtered.length) { el.innerHTML = '<div style="text-align:center;color:var(--text2);font-size:13px;padding:12px 0">暂无数据</div>'; return; }
+
+  const catMap = {};
+  filtered.forEach(r => {
+    catMap[r.cat] = (catMap[r.cat]||0) + r.amount;
+  });
+
+  const sorted = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  const maxVal = sorted[0][1];
+
+  el.innerHTML = sorted.map(([key, val]) => {
+    const cat = findCat(type, key);
+    const pct = maxVal > 0 ? (val/maxVal*100).toFixed(0) : 0;
+    return `
+      <div class="bar-item">
+        <span class="bar-label">${cat.icon} ${cat.name}</span>
+        <div class="bar-track">
+          <div class="bar-fill ${type}" style="width:${pct}%"></div>
+        </div>
+        <span class="bar-value">${fmt(val)}</span>
+      </div>`;
+  }).join('');
+}
+
+// ============================
+//  弹窗操作
+// ============================
+function openModal(preType, preCat) {
+  currentType = preType || 'expense';
+  selectedCat = preCat || CATEGORIES[currentType][0].key;
+  updateTypeTabs();
+  renderCatChips();
+  document.getElementById('amountInput').value = '';
+  document.getElementById('noteInput').value = '';
+  setDefaultDate();
+  document.getElementById('modalOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('amountInput').focus(), 400);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function switchType(type) {
+  currentType = type;
+  selectedCat = CATEGORIES[type][0].key;
+  updateTypeTabs();
+  renderCatChips();
+}
+
+function updateTypeTabs() {
+  const et = document.getElementById('tab-expense');
+  const it = document.getElementById('tab-income');
+  et.classList.toggle('active', currentType==='expense');
+  it.classList.toggle('active', currentType==='income');
+}
+
+function selectCat(key) {
+  selectedCat = key;
+  renderCatChips();
+}
+
+function quickAdd(type, cat) {
+  openModal(type, cat);
+}
+
+function saveRecord() {
+  const amountStr = document.getElementById('amountInput').value.trim();
+  const amount = parseFloat(amountStr);
+  if (!amount || amount <= 0) { showToast('请输入有效金额 💰'); return; }
+
+  const date = document.getElementById('datePicker').value;
+  if (!date) { showToast('请选择日期'); return; }
+
+  const note = document.getElementById('noteInput').value.trim();
+
+  const record = {
+    id: Date.now(),
+    type: currentType,
+    cat: selectedCat,
+    amount: Math.round(amount * 100) / 100,
+    date,
+    note
+  };
+
+  records.push(record);
+  saveToStorage();
+  closeModal();
+  showToast('记录成功 ✅');
+
+  // 切到对应月份
+  const d = new Date(date + 'T00:00:00');
+  currentYear = d.getFullYear();
+  currentMonth = d.getMonth() + 1;
+  updateMonthText();
+  render();
+}
+
+function deleteRecord(id) {
+  records = records.filter(r => r.id !== id);
+  saveToStorage();
+  render();
+  showToast('已删除');
+}
+
+function saveToStorage() {
+  localStorage.setItem('accountRecords', JSON.stringify(records));
+}
+
+// ============================
+//  滑动删除（左滑）
+// ============================
+let touchStartX = 0;
+let swipedId = null;
+
+function touchStart(e, id) {
+  touchStartX = e.touches[0].clientX;
+  // 关闭其他已展开
+  if (swipedId && swipedId !== id) {
+    const prev = document.getElementById('ri-' + swipedId);
+    if (prev) prev.classList.remove('swiped');
+  }
+}
+
+function touchEnd(e, id) {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const el = document.getElementById('ri-' + id);
+  if (!el) return;
+  if (dx < -50) {
+    el.classList.add('swiped');
+    swipedId = id;
+  } else if (dx > 20) {
+    el.classList.remove('swiped');
+    swipedId = null;
+  }
+}
+
+// ============================
+//  页面切换
+// ============================
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  const navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+  if (page === 'stats') renderStats(getMonthRecords());
+  if (page === 'settings') initSettingsPage();
+}
+
+// ============================
+//  设置页
+// ============================
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+function initSettingsPage() {
+  // 显示局域网地址（读取当前URL的host部分，指向本文件）
+  const urlBox = document.getElementById('lanUrl');
+  const loc = window.location;
+  if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
+    urlBox.textContent = '请在电脑浏览器中打开此工具，地址栏里的 IP 地址就是手机访问地址（例如 http://192.168.x.x:端口/记账工具.html）';
+  } else {
+    urlBox.textContent = loc.href;
+  }
+}
+
+// ============================
+//  CSV 导入
+// ============================
+// 分类名 → key 映射
+const CAT_NAME_MAP = {
+  '餐饮':'food','吃饭':'food','饭':'food','外卖':'food','食':'food',
+  '购物':'shop','买东西':'shop','网购':'shop',
+  '交通':'transport','打车':'transport','出行':'transport','地铁':'transport','公交':'transport','滴滴':'transport',
+  '娱乐':'entertain','游戏':'entertain','电影':'entertain',
+  '医疗':'health','药':'health','看病':'health','健康':'health',
+  '住房':'home','房租':'home','水电':'home','物业':'home',
+  '教育':'education','书':'education','课':'education',
+  '美妆':'beauty','化妆品':'beauty','护肤':'beauty',
+  '宠物':'pet','狗':'pet','猫':'pet',
+  '社交':'social','聚餐':'social','请客':'social','喝酒':'social',
+  '通信':'telecom','话费':'telecom','流量':'telecom','宽带':'telecom','网费':'telecom','通信网络':'telecom',
+  '学习':'study','培训':'study','书籍':'study',
+  '运动':'sport','健身':'sport','跑步':'sport',
+  '股票':'stock','炒股':'stock','证券':'stock',
+  '房产':'realestate','房子':'realestate','买房':'realestate','装修':'realestate',
+  '车子':'car','汽车':'car','买车':'car','加油':'car','保险':'car','车险':'car',
+  '奢侈品':'luxury','名牌':'luxury','包包':'luxury','手表':'luxury',
+  '工资':'salary','薪资':'salary',
+  '奖金':'bonus','绩效':'perf','绩效收入':'perf','绩效奖金':'perf',
+  '额外收入':'extra','其他收入':'extra','额外':'extra',
+  '广发':'gf','广发收入':'gf','广发银行':'gf',
+  '兼职':'freelance','副业':'freelance',
+  '投资':'invest','理财':'invest','基金':'invest',
+  '租金':'rent','房租收入':'rent',
+  '红包':'gift','礼金':'gift','压岁钱':'gift',
+};
+
+function guessType(str) {
+  str = (str || '').trim().toLowerCase();
+  if (['支出','expense','out','消费','花费','-'].includes(str)) return 'expense';
+  if (['收入','income','in','+'].includes(str)) return 'income';
+  return 'expense'; // 默认支出
+}
+
+function guessCat(name, type) {
+  name = (name || '').trim();
+  // 精确匹配
+  if (CAT_NAME_MAP[name]) return CAT_NAME_MAP[name];
+  // 模糊匹配（包含）
+  for (const [k, v] of Object.entries(CAT_NAME_MAP)) {
+    if (name.includes(k)) return v;
+  }
+  return type === 'income' ? 'other_i' : 'other_e';
+}
+
+function parseDate(str) {
+  if (!str) return null;
+  str = str.trim().replace(/\//g, '-').replace(/年/g, '-').replace(/月/g, '-').replace(/日/g, '');
+  // 尝试 YYYY-MM-DD
+  const m = str.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  return null;
+}
+
+function importCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const result = parseAndImport(text);
+    showImportResult(result);
+    event.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseAndImport(text) {
+  // 处理 BOM
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return { ok: 0, skip: 0, errors: ['文件内容为空或格式不对'] };
+
+  // 解析表头
+  const headers = splitCSVLine(lines[0]).map(h => h.trim().replace(/"/g,'').toLowerCase());
+  const colDate   = findCol(headers, ['日期','date','时间','time']);
+  const colType   = findCol(headers, ['类型','type','收支','方向']);
+  const colAmount = findCol(headers, ['金额','amount','price','钱','消费金额']);
+  const colCat    = findCol(headers, ['分类','category','类别','用途','交易类型']);
+  const colNote   = findCol(headers, ['备注','note','memo','说明','描述','商品说明','交易备注']);
+
+  if (colDate < 0 || colAmount < 0) {
+    return { ok: 0, skip: 0, errors: ['未找到"日期"或"金额"列，请检查表头'] };
+  }
+
+  let ok = 0, skip = 0;
+  const errors = [];
+  const imported = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitCSVLine(lines[i]);
+    const dateStr   = cols[colDate] || '';
+    const amountStr = cols[colAmount] || '';
+    const typeStr   = colType >= 0 ? cols[colType] : '';
+    const catStr    = colCat  >= 0 ? cols[colCat]  : '';
+    const noteStr   = colNote >= 0 ? cols[colNote] : '';
+
+    // 清理金额（去掉 ¥ 符号和逗号）
+    const amount = parseFloat(amountStr.replace(/[¥,，\s]/g, ''));
+    const date   = parseDate(dateStr);
+
+    if (!date || isNaN(amount) || amount <= 0) {
+      skip++;
+      if (errors.length < 5) errors.push(`第${i+1}行：日期或金额无效（${dateStr} / ${amountStr}）`);
+      continue;
+    }
+
+    const type = guessType(typeStr);
+    const cat  = guessCat(catStr, type);
+    const note = noteStr.replace(/"/g,'').trim();
+
+    imported.push({ id: Date.now() + i, type, cat, amount: Math.round(amount*100)/100, date, note });
+    ok++;
+  }
+
+  // 合并（去重：相同日期+金额+分类视为重复）
+  const existingKeys = new Set(records.map(r => `${r.date}_${r.amount}_${r.cat}`));
+  let dupes = 0;
+  imported.forEach(r => {
+    const k = `${r.date}_${r.amount}_${r.cat}`;
+    if (existingKeys.has(k)) { dupes++; return; }
+    existingKeys.add(k);
+    records.push(r);
+  });
+  saveToStorage();
+
+  return { ok: ok - dupes, skip, dupes, errors };
+}
+
+function findCol(headers, names) {
+  for (const n of names) {
+    const i = headers.indexOf(n.toLowerCase());
+    if (i >= 0) return i;
+    // 包含匹配
+    const j = headers.findIndex(h => h.includes(n.toLowerCase()));
+    if (j >= 0) return j;
+  }
+  return -1;
+}
+
+function splitCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; }
+    else if ((ch === ',' || ch === '\t') && !inQ) { result.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function showImportResult(result) {
+  const el = document.getElementById('importResult');
+  el.style.display = 'block';
+  let html = `✅ 成功导入 <b>${result.ok}</b> 条`;
+  if (result.dupes) html += `，跳过重复 ${result.dupes} 条`;
+  if (result.skip)  html += `，无效跳过 ${result.skip} 条`;
+  if (result.errors && result.errors.length) {
+    html += '<br><br>⚠️ 部分问题：<br>' + result.errors.map(e=>`· ${e}`).join('<br>');
+  }
+  el.innerHTML = html;
+  render();
+  if (result.ok > 0) showToast(`导入成功 ${result.ok} 条 ✅`);
+}
+
+// ============================
+//  CSV 导出
+// ============================
+function exportCSV() {
+  if (!records.length) { showToast('暂无数据可导出'); return; }
+  const rows = [['日期','类型','金额','分类','备注']];
+  const sorted = [...records].sort((a,b) => a.date.localeCompare(b.date));
+  sorted.forEach(r => {
+    const cat = findCat(r.type, r.cat);
+    rows.push([r.date, r.type==='expense'?'支出':'收入', r.amount, cat.name, r.note||'']);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `记账数据_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('导出成功 📋');
+}
+
+// ============================
+//  下载模板
+// ============================
+function downloadTemplate() {
+  const rows = [
+    ['日期','类型','金额','分类','备注'],
+    ['2024-01-05','支出','38.5','餐饮','午饭'],
+    ['2024-01-06','支出','15','交通','地铁'],
+    ['2024-01-06','收入','8000','工资','1月工资'],
+  ];
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '记账导入模板.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('模板已下载 📥');
+}
+
+// ============================
+//  导出HTML并提示
+// ============================
+function exportAndSave() {
+  showToast('请直接把"记账工具.html"文件发送给自己 📤');
+}
+
+// ============================
+//  清空数据
+// ============================
+function clearAllData() {
+  if (!confirm('⚠️ 确定要清空所有记录？此操作不可恢复！\n\n建议先导出备份。')) return;
+  records = [];
+  saveToStorage();
+  render();
+  showToast('数据已清空');
+}
+
+// ============================
+//  Toast
+// ============================
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ============================
+//  启动
+// ============================
+init();
+</script>
+</body>
+</html>
